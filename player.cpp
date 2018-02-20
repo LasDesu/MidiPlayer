@@ -18,8 +18,6 @@ static QSettings app_settings( "MAA Soft", "MIDI player" );
 
 // FILE global vars
 snd_seq_queue_status_t *status;
-char playfile[PATH_MAX];
-char port_name[16];
 char MIDI_dev[16];
 
 MidiPlayer::MidiPlayer( PlayerWindow *parent )
@@ -27,7 +25,6 @@ MidiPlayer::MidiPlayer( PlayerWindow *parent )
 	, m_parent( parent )
 {
 	memset( MIDI_dev, 0, sizeof(MIDI_dev) );
-	memset( port_name, 0, sizeof(port_name) );
 	memset( &port, 0, sizeof(port) );
 	seq = NULL;
 	queue = 0;
@@ -231,18 +228,18 @@ void MidiPlayer::send_controller( unsigned chan, unsigned param, unsigned value)
 	//snd_seq_drain_output(seq);
 }
 
-void MidiPlayer::send_SysEx(char * buf,int data_size)
+void MidiPlayer::send_SysEx( const unsigned char *buf, int data_size )
 {
-	pausePlayer();
 	snd_seq_event_t ev;
+
+	connect_port();
+
 	snd_seq_ev_clear(&ev);
 	ev.dest = port;
-	snd_seq_ev_set_sysex(&ev, data_size, buf );
+	snd_seq_ev_set_sysex(&ev, data_size, (void *)buf);
 	snd_seq_ev_set_direct(&ev);
 	snd_seq_event_output_direct(seq, &ev);
-	snd_seq_drain_output(seq);
-	resumePlayer();
-}	// end send_SysEx
+}
 
 void MidiPlayer::init_seq()
 {
@@ -550,9 +547,9 @@ void MidiPlayer::reset()
 }
 
 void MidiPlayer::setVolume(int val) {
-	char buf[8];
+	unsigned char buf[8];
 	if (seq) {
-		connect_port();
+		pausePlayer();
 		buf[0] = 0xF0;
 		buf[1] = 0x7F;
 		buf[2] = 0x7F;
@@ -562,5 +559,7 @@ void MidiPlayer::setVolume(int val) {
 		buf[6] = val;
 		buf[7] = 0xF7;
 		send_SysEx(buf, 8);
+		snd_seq_drain_output(seq);
+		resumePlayer();
 	}
 }

@@ -48,7 +48,7 @@ int MidiPlayer::read_var(void) {
 }   // end read_var
 
 // start of data reading functions
-int MidiPlayer::read_riff(char *file_name) {
+int MidiPlayer::read_riff(QString &file_name) {
 	// skip file length
 	read_byte();
 	read_byte();
@@ -83,7 +83,7 @@ data_not_found:
 	return 0;
 }   // end read_riff
 
-int MidiPlayer::read_smf(char *file_name) {
+int MidiPlayer::read_smf(QString &file_name) {
 	int header_len, type, num_tracks, time_division;
 	int err;
 	// read midi data into memory, parsing it into events
@@ -201,7 +201,7 @@ bool MidiPlayer::tick_comp(const struct event& e1, const struct event& e2) {
 	return ( e1.tick < e2.tick );
 }
 
-int MidiPlayer::read_track(int track_end, char *file_name) {
+int MidiPlayer::read_track(int track_end, QString &file_name) {
 // read one complete track from the file, parse it into events
 	int tick = 0;
 	unsigned char last_cmd = 0;
@@ -356,11 +356,11 @@ _error:
 	return 0;
 }   // end read_track
 
-int MidiPlayer::parseFile(char *file_name)
+int MidiPlayer::parseFile(QString &file_name)
 {
 	all_events.clear();
 	// parse the midi file
-	file = fopen(file_name, "rb");
+	file = fopen(file_name.toLocal8Bit().data(), "rb");
 	if (!file) {
 		QMessageBox::critical(m_parent, "MIDI Player", QString("Cannot open %s - %s") .arg(file_name) .arg(strerror(errno)));
 		return 0;

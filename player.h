@@ -7,8 +7,6 @@
 
 #include <alsa/asoundlib.h>
 
-extern char playfile[PATH_MAX];
-
 class PlayerWindow;
 
 class MidiPlayer : public QThread {
@@ -26,10 +24,14 @@ public:
 	int openPort();
 	int closePort();
 
+	void send_pgmchange( unsigned chan, unsigned value );
+	void send_controller( unsigned chan, unsigned param, unsigned value);
+	void send_SysEx( const unsigned char *buf, int len );
+
 	int ready();
 	unsigned getTick();
 
-	int parseFile(char *);
+	int parseFile(QString &filename);
 
 	void startPlayer();
 	void stopPlayer();
@@ -92,14 +94,10 @@ private:
 	int read_int(int);
 	int read_var(void);
 	int read_32_le(void);
-	int read_smf(char *);
-	int read_riff(char *);
-	int read_track(int, char *);
+	int read_smf(QString &);
+	int read_riff(QString &);
+	int read_track(int, QString &);
 	void play_midi(unsigned int);
-
-	void send_pgmchange( unsigned chan, unsigned value );
-	void send_controller( unsigned chan, unsigned param, unsigned value);
-	void send_SysEx( char *buf, int len );
 
 	void init_seq();
 	void close_seq();

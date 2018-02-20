@@ -27,6 +27,7 @@ private:
 	QTimer *timer;
 
 	MidiPlayer *player;
+	QString playfile;
 
 private slots:
 	void on_progressBar_sliderReleased();
@@ -39,6 +40,9 @@ private slots:
 	void tickDisplay();
 	void on_PortBox_activated(int index);
 	void on_butRescan_clicked();
+	void on_butResetGM_clicked();
+	void on_butResetGS_clicked();
+	void on_butResetXG_clicked();
 };
 
 #endif // MIDI_PLAYER_H

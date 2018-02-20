@@ -43,7 +43,7 @@ PlayerWindow::~PlayerWindow()
 void PlayerWindow::on_Open_button_clicked()
 {
 	QString fn = QFileDialog::getOpenFileName(this,
-		"Open MIDI File", QString(),
+		"Open MIDI File", playfile,
 		"MIDI files (*.mid *.MID);;Any (*.*)");
 	if ( fn.isEmpty() )
 		return;
@@ -57,8 +57,9 @@ void PlayerWindow::on_Open_button_clicked()
 	ui->MidiFile_display->setText(fn);
 	ui->MIDI_length_display->setText("00:00");
 	player->openPort();
-	strcpy(playfile, fn.toLocal8Bit().data());
-	if ( !player->parseFile(playfile) ) {
+	playfile = fn;
+	if ( !player->parseFile(playfile) )
+	{
 		QMessageBox::critical(this, "MIDI Player", QString("Invalid file"));
 		return;
 	}   // parseFile
@@ -231,4 +232,25 @@ void PlayerWindow::on_butRescan_clicked()
 	ui->PortBox->clear();
 	ui->PortBox->addItems( player->getPorts() );
 	ui->PortBox->setCurrentIndex( player->getPortIndex() );
+}
+
+static const unsigned char sysex_reset_GM[] = { 0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7 };
+static const unsigned char sysex_reset_GS[] =
+	//{ 0xF0, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };	// from GS_RESET.MID
+	{ 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };
+static const unsigned char sysex_reset_XG[] = { 0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7 };
+
+void PlayerWindow::on_butResetGM_clicked()
+{
+	player->send_SysEx( sysex_reset_GM, sizeof(sysex_reset_GM) );
+}
+
+void PlayerWindow::on_butResetGS_clicked()
+{
+	player->send_SysEx( sysex_reset_GS, sizeof(sysex_reset_GS) );
+}
+
+void PlayerWindow::on_butResetXG_clicked()
+{
+	player->send_SysEx( sysex_reset_XG, sizeof(sysex_reset_XG) );
 }
