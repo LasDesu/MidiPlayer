@@ -15,7 +15,8 @@
 //      read_int()   -- helper function
 //      read_var()   -- helper function
 
-#include "playerwindow.h"
+#include "playerwindow.h" // hack
+#include "player.h"
 #include "ui_midi_player.h"
 #include <alsa/asoundlib.h>
 #include <algorithm>
@@ -23,30 +24,17 @@
 
 #define MAKE_ID(c1, c2, c3, c4) ((c1) | ((c2) << 8) | ((c3) << 16) | ((c4) << 24))
 
-bool PlayerWindow::minor_key=false;
-int PlayerWindow::sf=0;  // 0=Cmajor, <0 = #flats, >0 = #sharps
-double PlayerWindow::BPM=0,PlayerWindow::PPQ=0;
 int smpte_timing;
-int file_offset;
 int prev_tick;
-FILE *file;
 
-// helper functions, most are INLINE
-int PlayerWindow::read_id(void) {
-	return read_32_le();
-}
-int PlayerWindow::read_byte(void) {
-	++file_offset;
-	return getc(file);
-}
-int PlayerWindow::read_32_le(void) {
+int MidiPlayer::read_32_le(void) {
 	int value = read_byte();
 	value |= read_byte() << 8;
 	value |= read_byte() << 16;
 	value |= read_byte() << 24;
 	return !feof(file) ? value : -1;
 }
-int PlayerWindow::read_int(int bytes) {
+int MidiPlayer::read_int(int bytes) {
 	int value = 0;
 	do {
 		int c = read_byte();
@@ -56,7 +44,7 @@ int PlayerWindow::read_int(int bytes) {
 	} while (--bytes);
 	return value;
 }
-int PlayerWindow::read_var(void) {
+int MidiPlayer::read_var(void) {
 	int c = read_byte();
 	int value = c & 0x7f;
 	if (c & 0x80) {
@@ -75,14 +63,9 @@ int PlayerWindow::read_var(void) {
 	}
 	return !feof(file) ? value : -1;
 }   // end read_var
-void PlayerWindow::skip(int bytes) {
-	while (bytes > 0)
-		read_byte(), --bytes;
-}
-
 
 // start of data reading functions
-int PlayerWindow::read_riff(char *file_name) {
+int MidiPlayer::read_riff(char *file_name) {
 	// skip file length
 	read_byte();
 	read_byte();
@@ -109,15 +92,15 @@ int PlayerWindow::read_riff(char *file_name) {
 	return read_smf(file_name);
 
 invalid_format:
-	QMessageBox::critical(this, "MIDI Player", QString("%1: invalid file format") .arg(file_name));
+	QMessageBox::critical(m_parent, "MIDI Player", QString("%1: invalid file format") .arg(file_name));
 	return 0;
 
 data_not_found:
-	QMessageBox::critical(this, "MIDI Player", QString("%1: data chunk not found") .arg(file_name));
+	QMessageBox::critical(m_parent, "MIDI Player", QString("%1: data chunk not found") .arg(file_name));
 	return 0;
 }   // end read_riff
 
-int PlayerWindow::read_smf(char *file_name) {
+int MidiPlayer::read_smf(char *file_name) {
 	int header_len, type, num_tracks, time_division;
 	int err;
 	// read midi data into memory, parsing it into events
@@ -128,12 +111,12 @@ int PlayerWindow::read_smf(char *file_name) {
 
 	type = read_int(2);     // midi type 0 or 1
 	if ( (type != 0) && (type != 1) ) {
-		QMessageBox::critical(this, "MIDI Player", QString("%1: type %2 format is not supported") .arg(file_name) .arg(type));
+		QMessageBox::critical(m_parent, "MIDI Player", QString("%1: type %2 format is not supported") .arg(file_name) .arg(type));
 		return 0;
 	}
 	num_tracks = read_int(2);       // number of tracks
 	if ( (num_tracks < 1) || (num_tracks > 1000) ) {
-		QMessageBox::critical(this, "MIDI Player", QString("%1: invalid number of tracks (%2)") .arg(file_name) .arg(num_tracks));
+		QMessageBox::critical(m_parent, "MIDI Player", QString("%1: invalid number of tracks (%2)") .arg(file_name) .arg(num_tracks));
 		num_tracks = 0;
 		return 0;
 	}
@@ -173,13 +156,13 @@ int PlayerWindow::read_smf(char *file_name) {
 			snd_seq_queue_tempo_set_ppq(queue_tempo, 15 * time_division);
 			break;
 		default:
-			QMessageBox::critical(this, "MIDI Player", QString("%1: invalid number of SMPTE frames per second (%2)") .arg(file_name) .arg(i));
+			QMessageBox::critical(m_parent, "MIDI Player", QString("%1: invalid number of SMPTE frames per second (%2)") .arg(file_name) .arg(i));
 			return 0;
 		}
 	}
 	err = snd_seq_set_queue_tempo(seq, queue, queue_tempo);
 	if ( err < 0 ) {
-		QMessageBox::critical(this, "MIDI Player", QString("Cannot set queue tempo (%1/%2") .arg(snd_seq_queue_tempo_get_tempo(queue_tempo)) .arg(snd_seq_queue_tempo_get_ppq(queue_tempo)));
+		QMessageBox::critical(m_parent, "MIDI Player", QString("Cannot set queue tempo (%1/%2") .arg(snd_seq_queue_tempo_get_tempo(queue_tempo)) .arg(snd_seq_queue_tempo_get_ppq(queue_tempo)));
 		return 0;
 	}
 	PPQ = snd_seq_queue_tempo_get_ppq(queue_tempo);
@@ -197,11 +180,11 @@ int PlayerWindow::read_smf(char *file_name) {
 			int id = read_id();
 			len = read_int(4);      // track length
 			if ( feof(file) ) {
-				QMessageBox::critical(this, "MIDI Player", QString("%1: unexpected end of file") .arg(file_name));
+				QMessageBox::critical(m_parent, "MIDI Player", QString("%1: unexpected end of file") .arg(file_name));
 				return 0;
 			}
 			if (len < 0 || len >= 0x10000000) {
-				QMessageBox::critical(this, "MIDI Player", QString("%1: invalid chunk length %2") .arg(file_name) .arg(len));
+				QMessageBox::critical(m_parent, "MIDI Player", QString("%1: invalid chunk length %2") .arg(file_name) .arg(len));
 				return 0;
 			}
 			if (id == MAKE_ID('M', 'T', 'r', 'k'))
@@ -227,15 +210,15 @@ int PlayerWindow::read_smf(char *file_name) {
 	return 1;   // good return, all data read ok
 
 invalid_format:
-	QMessageBox::critical( this, "MIDI Player", QString("%1: invalid file format") .arg(file_name) );
+	QMessageBox::critical( m_parent, "MIDI Player", QString("%1: invalid file format") .arg(file_name) );
 	return 0;
 }   // end read_smf
 
-bool PlayerWindow::tick_comp(const struct event& e1, const struct event& e2) {
+bool MidiPlayer::tick_comp(const struct event& e1, const struct event& e2) {
 	return ( e1.tick < e2.tick );
 }
 
-int PlayerWindow::read_track(int track_end, char *file_name) {
+int MidiPlayer::read_track(int track_end, char *file_name) {
 // read one complete track from the file, parse it into events
 	int tick = 0;
 	unsigned char last_cmd = 0;
@@ -385,15 +368,17 @@ int PlayerWindow::read_track(int track_end, char *file_name) {
 		}   // end switch
 	}   // end WHILE (one complete track)
 _error:
-	QMessageBox::critical(this, "MIDI Player", QString("%1: invalid MIDI data (offset %2)") .arg(file_name) .arg(file_offset));
+	QMessageBox::critical(m_parent, "MIDI Player", QString("%1: invalid MIDI data (offset %2)") .arg(file_name) .arg(file_offset));
 	return 0;
 }   // end read_track
 
-int PlayerWindow::parseFile(char *file_name) {
+int MidiPlayer::parseFile(char *file_name)
+{
+	all_events.clear();
 	// parse the midi file
 	file = fopen(file_name, "rb");
 	if (!file) {
-		QMessageBox::critical(this, "MIDI Player", QString("Cannot open %s - %s") .arg(file_name) .arg(strerror(errno)));
+		QMessageBox::critical(m_parent, "MIDI Player", QString("Cannot open %s - %s") .arg(file_name) .arg(strerror(errno)));
 		return 0;
 	}
 	file_offset = 0;
@@ -407,9 +392,12 @@ int PlayerWindow::parseFile(char *file_name) {
 		ok = read_riff(file_name);
 		break;
 	default:
-		QMessageBox::critical(this, "MIDI Player", QString("%1 is not a Standard MIDI File") .arg(file_name));
+		QMessageBox::critical(m_parent, "MIDI Player", QString("%1 is not a Standard MIDI File") .arg(file_name));
 		break;
 	}
 	fclose(file);   // all data loaded or invalid file
+
+	last_tick = all_events.back().tick;
+fprintf(stderr,"%s %u %d %d\n",__FUNCTION__,__LINE__,ok,all_events.size());
 	return ok;
 }   // end parseFile
