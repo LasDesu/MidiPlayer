@@ -12,6 +12,9 @@
 
 #include <QMessageBox>
 #include <QTimer>
+#include <QSettings>
+
+static QSettings app_settings( "MAA Soft", "MIDI player" );
 
 // FILE global vars
 snd_seq_queue_status_t *status;
@@ -30,7 +33,8 @@ MidiPlayer::MidiPlayer( PlayerWindow *parent )
 	queue = 0;
 	currentTick = 0;
 	port_index = -1;
-	port = NULL;
+	port.client = app_settings.value("seq/client", 0).toInt();
+	port.port = app_settings.value("seq/port", 0).toInt();
 
 	init_seq();
 	queue = snd_seq_alloc_named_queue(seq, "midi_player");
@@ -39,16 +43,18 @@ MidiPlayer::MidiPlayer( PlayerWindow *parent )
 	snd_seq_queue_status_malloc(&status);
 	//close_seq();
 
-	if ( ports.size() )
+	if ( (port_index < 0) && ports.size() )
 	{
 		port_index = 0;
-		port = &ports[0];
+		port = ports[0];
 	}
 }
 
 MidiPlayer::~MidiPlayer()
 {
-
+	stopPlayer();
+	reset();
+	app_settings.sync();
 }
 
 /*
@@ -115,8 +121,7 @@ void MidiPlayer::run()
 		}
 		ev.time.tick = Event->tick;
 		ev.type = Event->type;
-//		ev.dest = ports[Event->port];
-		ev.dest = *port;
+		ev.dest = port;
 		ch = Event->data.d[0] & 0xF;
 		switch ( ev.type ) {
 		case SND_SEQ_EVENT_NOTEON:
@@ -202,7 +207,7 @@ void MidiPlayer::send_pgmchange( unsigned chan, unsigned value)
 	snd_seq_event_t ev;
 
 	snd_seq_ev_clear(&ev);
-	ev.dest = *port;
+	ev.dest = port;
 
 	snd_seq_ev_set_pgmchange( &ev, chan, value );
 	snd_seq_ev_set_direct(&ev);
@@ -217,7 +222,7 @@ void MidiPlayer::send_controller( unsigned chan, unsigned param, unsigned value)
 	int ret;
 
 	snd_seq_ev_clear(&ev);
-	ev.dest = *port;
+	ev.dest = port;
 
 	snd_seq_ev_set_controller( &ev, chan, param, value );
 	ret = snd_seq_ev_set_direct(&ev);
@@ -231,7 +236,7 @@ void MidiPlayer::send_SysEx(char * buf,int data_size)
 	pausePlayer();
 	snd_seq_event_t ev;
 	snd_seq_ev_clear(&ev);
-	ev.dest = *port;
+	ev.dest = port;
 	snd_seq_ev_set_sysex(&ev, data_size, buf );
 	snd_seq_ev_set_direct(&ev);
 	snd_seq_event_output_direct(seq, &ev);
@@ -281,20 +286,20 @@ void MidiPlayer::connect_port()
 		int err = snd_seq_create_port(seq, pinfo);
 		check_snd("create port", err);
 
-		port = &ports[port_index];
-		err = snd_seq_connect_to(seq, 0, port->client, port->port );
+		port = ports[port_index];
+		err = snd_seq_connect_to(seq, 0, port.client, port.port );
 		if (err < 0 && err!= -16)
-			QMessageBox::critical(m_parent, "MIDI Player", QString("%4 Cannot connect to port %1:%2 - %3") .arg(port->client) .arg(port->port) .arg(strerror(errno)) .arg(err));
-		qDebug() << "Connected port" << port->client << ":" << port->port ;
+			QMessageBox::critical(m_parent, "MIDI Player", QString("%4 Cannot connect to port %1:%2 - %3") .arg(port.client) .arg(port.port) .arg(strerror(errno)) .arg(err));
+		qDebug() << "Connected port" << port.client << ":" << port.port ;
 	}
 }	// end connect_port
 
 void MidiPlayer::disconnect_port()
 {
-	if ( seq && port ) {
+	if ( seq && port.client ) {
 		int err;
-		err = snd_seq_disconnect_to(seq, 0, port->client, port->port );
-		qDebug() << "Disconnected current port" << port->client << ":" << port->port;
+		err = snd_seq_disconnect_to(seq, 0, port.client, port.port );
+		qDebug() << "Disconnected current port" << port.client << ":" << port.port;
 	}	// end if seq
 }	// end disconnect_port
 
@@ -315,13 +320,18 @@ void MidiPlayer::scanPorts()
 		snd_seq_port_info_set_client(pinfo, client);
 		snd_seq_port_info_set_port(pinfo, -1);
 		while (snd_seq_query_next_port(seq, pinfo) >= 0) {
+			const snd_seq_addr_t *addr;
+
 			/* we need both WRITE and SUBS_WRITE */
 			if ((snd_seq_port_info_get_capability(pinfo)
 				 & (SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE))
 				!= (SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE))
 				continue;
 
-			ports << *snd_seq_port_info_get_addr(pinfo);
+			addr = snd_seq_port_info_get_addr(pinfo);
+			ports << *addr;
+			if ( (addr->client == port.client) && (addr->port == port.port) )
+				port_index = ports.size() - 1;
 		}
 	}
 }	// end getPorts
@@ -411,6 +421,9 @@ int MidiPlayer::openPort( int index )
 	init_seq();
 	port_index = index;
 	connect_port();
+
+	app_settings.setValue( "seq/client", port.client );
+	app_settings.setValue( "seq/port", port.port );
 
 	return 0;
 }

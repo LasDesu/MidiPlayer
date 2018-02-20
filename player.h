@@ -18,7 +18,9 @@ public:
 	MidiPlayer(PlayerWindow *parent = 0);
 	~MidiPlayer();
 
+	void scanPorts();
 	const QStringList getPorts();
+	const int getPortIndex() { return port_index; }
 
 	int openPort( int index );
 	int openPort();
@@ -70,7 +72,7 @@ private:
 	};  // end struct track definition
 
 	snd_seq_t *seq;
-	const snd_seq_addr_t *port;
+	snd_seq_addr_t port;
 	int port_index;
 
 	bool minor_key;
@@ -103,7 +105,6 @@ private:
 	void close_seq();
 	void connect_port();
 	void disconnect_port();
-	void scanPorts();
 	void getRawDev( const QString &buf = QString() );
 
 	FILE *file;

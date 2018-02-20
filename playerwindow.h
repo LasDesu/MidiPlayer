@@ -38,6 +38,7 @@ private slots:
 	void on_MIDI_Volume_valueChanged(int);
 	void tickDisplay();
 	void on_PortBox_activated(int index);
+	void on_butRescan_clicked();
 };
 
 #endif // MIDI_PLAYER_H

@@ -21,9 +21,7 @@ PlayerWindow::PlayerWindow(QWidget *parent) :
     QMainWindow(parent),
 	ui(new Ui::PlayerWindow)
 {
-	setStatusBar(0);
 	ui->setupUi(this);
-	ui->progressBar->setEnabled(false);
 	timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), this, SLOT(tickDisplay()));
 
@@ -31,6 +29,7 @@ PlayerWindow::PlayerWindow(QWidget *parent) :
 
 	ui->PortBox->clear();
 	ui->PortBox->addItems( player->getPorts() );
+	ui->PortBox->setCurrentIndex( player->getPortIndex() );
 }   // end constructor
 
 PlayerWindow::~PlayerWindow()
@@ -44,7 +43,7 @@ PlayerWindow::~PlayerWindow()
 void PlayerWindow::on_Open_button_clicked()
 {
 	QString fn = QFileDialog::getOpenFileName(this,
-		"Open MIDI File", "",
+		"Open MIDI File", QString(),
 		"MIDI files (*.mid *.MID);;Any (*.*)");
 	if ( fn.isEmpty() )
 		return;
@@ -224,4 +223,12 @@ void PlayerWindow::on_PortBox_activated(int index)
 
 	player->closePort();
 	player->openPort( index );
+}
+
+void PlayerWindow::on_butRescan_clicked()
+{
+	player->scanPorts();
+	ui->PortBox->clear();
+	ui->PortBox->addItems( player->getPorts() );
+	ui->PortBox->setCurrentIndex( player->getPortIndex() );
 }
