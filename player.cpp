@@ -51,6 +51,43 @@ MidiPlayer::~MidiPlayer()
 
 }
 
+/*
+ * 31.25 kbaud, one start bit, eight data bits, two stop bits.
+ * (The MIDI spec says one stop bit, but every transmitter uses two, just to be
+ * sure, so we better not exceed that to avoid overflowing the output buffer.)
+ */
+#define MIDI_BYTES_PER_SEC (31250 / (1 + 8 + 2))
+
+void MidiPlayer::handle_big_sysex(snd_seq_event_t *ev)
+{
+	unsigned int length;
+	ssize_t event_size;
+	int err;
+
+	length = ev->data.ext.len;
+	if (length > MIDI_BYTES_PER_SEC)
+		ev->data.ext.len = MIDI_BYTES_PER_SEC;
+	event_size = snd_seq_event_length(ev);
+	if (event_size + 1 > snd_seq_get_output_buffer_size(seq)) {
+		err = snd_seq_drain_output(seq);
+		check_snd("drain output", err);
+		err = snd_seq_set_output_buffer_size(seq, event_size + 1);
+		check_snd("set output buffer size", err);
+	}
+	while (length > MIDI_BYTES_PER_SEC) {
+		err = snd_seq_event_output(seq, ev);
+		check_snd("output event", err);
+		err = snd_seq_drain_output(seq);
+		check_snd("drain output", err);
+		err = snd_seq_sync_output_queue(seq);
+		check_snd("sync output", err);
+		sleep(1);
+		ev->data.ext.ptr += MIDI_BYTES_PER_SEC;
+		length -= MIDI_BYTES_PER_SEC;
+	}
+	ev->data.ext.len = length;
+}
+
 void MidiPlayer::run()
 {
 	int end_delay = 2;
@@ -109,8 +146,9 @@ void MidiPlayer::run()
 			ev.data.control.value |= Event->data.d[2] << 7;
 			ev.data.control.value -= 0x2000;
 			break;
-		case SND_SEQ_EVENT_SYSEX://fprintf(stderr,"play sysex(%d): %.2x %.2x\n", Event->data.length, Event->sysex.data()[0], Event->sysex.data()[1]);
+		case SND_SEQ_EVENT_SYSEX:
 			snd_seq_ev_set_variable(&ev, Event->data.length, Event->sysex.data());
+			handle_big_sysex(&ev);
 			break;
 		case SND_SEQ_EVENT_TEMPO:
 			snd_seq_ev_set_fixed(&ev);

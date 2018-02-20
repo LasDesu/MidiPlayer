@@ -1,20 +1,3 @@
-// file_parser.cpp -- part of MIDI_PLAYER
-// validate the midi file is formatted correctly, then parse the track data
-// and load events into memory images.
-// Requires "seq", "queue", "song_length_seconds" vars
-// contains:
-//      parseFile() -- main process that calls the other functions
-//      read_riff() -- RIFF is a (potential) wrapper around SMF data, strip it off
-//      read_smf()  -- this is the heavy lifting of parsing the Standard Midi File (SMF) data
-//      read_track() -- called from read_smf to get midi data
-//      read_id()   -- INLINE helper function
-//      read_byte()   -- INLINE helper function
-//      skip()   -- INLINE helper function
-//      tick_comp()   -- sort helper function
-//      read_32_le()   -- helper function
-//      read_int()   -- helper function
-//      read_var()   -- helper function
-
 #include "playerwindow.h" // hack
 #include "player.h"
 #include "ui_midi_player.h"
@@ -261,7 +244,7 @@ int MidiPlayer::read_track(int track_end, char *file_name) {
 			break;
 		case 0xA:
 			cmd_type[x] = SND_SEQ_EVENT_KEYPRESS;
-			break;
+			break;Event.sysex.clear();
 		case 0xB:
 			cmd_type[x] = SND_SEQ_EVENT_CONTROLLER;
 			break;
@@ -306,6 +289,7 @@ int MidiPlayer::read_track(int track_end, char *file_name) {
 				Event.type = SND_SEQ_EVENT_SYSEX;
 				Event.tick = tick;
 				Event.data.length = len;
+				Event.sysex.clear();
 				if (cmd == 0xf0) {
 					Event.sysex.push_back(0xf0);
 					c = 1;

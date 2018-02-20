@@ -60,7 +60,7 @@ private:
 			int tempo;
 			unsigned int length;	// length of sysex data
 		} data;
-		std::vector<char> sysex;
+		std::vector<unsigned char> sysex;
 	};  // end struct event definition
 
 	struct track {
@@ -79,6 +79,9 @@ private:
 
 	QList<snd_seq_addr_t> ports;
 	QList<struct event> all_events;
+
+	void handle_big_sysex(snd_seq_event_t *ev);
+
 	inline void check_snd(const char *, int);
 	inline int read_id(void);
 	inline int read_byte(void);
