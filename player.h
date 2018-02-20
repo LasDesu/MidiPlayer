@@ -34,6 +34,7 @@ public:
 	void pausePlayer();
 	void resumePlayer();
 	void silence();
+	void reset();
 
 	void setVolume(int val);
 

@@ -105,6 +105,7 @@ void PlayerWindow::on_Play_button_toggled(bool checked)
 			timer->stop();
 
 		player->stopPlayer();
+		player->reset();
 		ui->progressBar->blockSignals(true);
 		ui->progressBar->setValue(0);
 		ui->progressBar->blockSignals(false);
@@ -152,7 +153,7 @@ void PlayerWindow::on_progressBar_sliderPressed()
 	// stop the timer and queue
 	if ( timer->isActive() )
 		timer->stop();
-	player->stopPlayer();
+	player->pausePlayer();
 }   // end on_progressBar_sliderPressed
 
 void PlayerWindow::on_progressBar_sliderReleased()

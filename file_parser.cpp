@@ -223,7 +223,7 @@ int MidiPlayer::read_track(int track_end, char *file_name) {
 	int tick = 0;
 	unsigned char last_cmd = 0;
 	struct event Event;
-	Event.port=0;
+	Event.port = 0;
 	// the current file position is after the track ID and length
 	while (file_offset < track_end)
 	{
@@ -398,6 +398,6 @@ int MidiPlayer::parseFile(char *file_name)
 	fclose(file);   // all data loaded or invalid file
 
 	last_tick = all_events.back().tick;
-fprintf(stderr,"%s %u %d %d\n",__FUNCTION__,__LINE__,ok,all_events.size());
+
 	return ok;
 }   // end parseFile

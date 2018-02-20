@@ -54,7 +54,8 @@ MidiPlayer::~MidiPlayer()
 void MidiPlayer::run()
 {
 	int end_delay = 2;
-	int err;fprintf(stderr,"%s %u %d\n",__FUNCTION__,__LINE__,all_events.size());
+	unsigned ch;
+	int err;
 	// set data in (snd_seq_event_t ev) and output the event
 	// common settings for all events
 	snd_seq_event_t ev;
@@ -79,36 +80,37 @@ void MidiPlayer::run()
 		ev.type = Event->type;
 //		ev.dest = ports[Event->port];
 		ev.dest = *port;
+		ch = Event->data.d[0] & 0xF;
 		switch ( ev.type ) {
 		case SND_SEQ_EVENT_NOTEON:
 		case SND_SEQ_EVENT_NOTEOFF:
 		case SND_SEQ_EVENT_KEYPRESS:
 			snd_seq_ev_set_fixed(&ev);
-			ev.data.note.channel = Event->data.d[0];
+			ev.data.note.channel = ch;
 			ev.data.note.note = Event->data.d[1];
 			ev.data.note.velocity = Event->data.d[2];
 			break;
 		case SND_SEQ_EVENT_CONTROLLER:
 			snd_seq_ev_set_fixed(&ev);
-			ev.data.control.channel = Event->data.d[0];
+			ev.data.control.channel = ch;
 			ev.data.control.param = Event->data.d[1];
 			ev.data.control.value = Event->data.d[2];
 			break;
 		case SND_SEQ_EVENT_PGMCHANGE:
 		case SND_SEQ_EVENT_CHANPRESS:
 			snd_seq_ev_set_fixed(&ev);
-			ev.data.control.channel = Event->data.d[0];
+			ev.data.control.channel = ch;
 			ev.data.control.value = Event->data.d[1];
 			break;
 		case SND_SEQ_EVENT_PITCHBEND:
 			snd_seq_ev_set_fixed(&ev);
-			ev.data.control.channel = Event->data.d[0];
-			ev.data.control.value =
-				((Event->data.d[1]) |
-				 ((Event->data.d[2]) << 7)) - 0x2000;
+			ev.data.control.channel = ch;
+			ev.data.control.value = Event->data.d[1];
+			ev.data.control.value |= Event->data.d[2] << 7;
+			ev.data.control.value -= 0x2000;
 			break;
-		case SND_SEQ_EVENT_SYSEX:
-			snd_seq_ev_set_variable(&ev, Event->data.length, &Event->sysex);
+		case SND_SEQ_EVENT_SYSEX://fprintf(stderr,"play sysex(%d): %.2x %.2x\n", Event->data.length, Event->sysex.data()[0], Event->sysex.data()[1]);
+			snd_seq_ev_set_variable(&ev, Event->data.length, Event->sysex.data());
 			break;
 		case SND_SEQ_EVENT_TEMPO:
 			snd_seq_ev_set_fixed(&ev);
@@ -486,6 +488,15 @@ void MidiPlayer::silence()
 		} // end strlen(MIDI_dev)
 	} // end else
 }	// end on_Panic_button_clicked
+
+void MidiPlayer::reset()
+{
+	silence();
+	for ( int x = 0; x < 16; x ++ )
+	{
+		send_controller( x, 121, 0 );
+	}
+}
 
 void MidiPlayer::setVolume(int val) {
 	char buf[8];
