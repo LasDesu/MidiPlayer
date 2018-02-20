@@ -1,10 +1,10 @@
 #include <QApplication>
-#include "midi_player.h"
+#include "playerwindow.h"
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    MIDI_PLAYER w;
-    w.show();
-    return a.exec();
+	QApplication a(argc, argv);
+	PlayerWindow w;
+	w.show();
+	return a.exec();
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MIDI_PLAYER</class>
- <widget class="QMainWindow" name="MIDI_PLAYER">
+ <class>PlayerWindow</class>
+ <widget class="QMainWindow" name="PlayerWindow">
   <property name="windowModality">
    <enum>Qt::ApplicationModal</enum>
   </property>
@@ -366,7 +366,7 @@
      <x>0</x>
      <y>0</y>
      <width>496</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

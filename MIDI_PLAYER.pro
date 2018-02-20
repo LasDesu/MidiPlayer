@@ -11,15 +11,18 @@ TARGET = MIDI_PLAYER
 
 TEMPLATE = app
 
-SOURCES += midi_player.cpp \
+SOURCES += \
     main.cpp \
     player.cpp \
-    file_parser.cpp
+    file_parser.cpp \
+    playerwindow.cpp
 
-HEADERS += midi_player.h
+HEADERS += \
+    playerwindow.h \
+    player.h
 
 FORMS += midi_player.ui
 
-DEFINES += QT_NO_DEBUG_OUTPUT
+#DEFINES += QT_NO_DEBUG_OUTPUT
 
 LIBS += -lasound
