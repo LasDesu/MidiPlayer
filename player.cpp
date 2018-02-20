@@ -10,6 +10,7 @@
 #include <alsa/asoundlib.h>
 #include <vector>
 #include <QTimer>
+#include <QMessageBox>
 
 // INLINE function
 void MIDI_PLAYER::check_snd(const char *operation, int err) {

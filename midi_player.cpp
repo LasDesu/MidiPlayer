@@ -31,6 +31,8 @@
 #include <algorithm>
 #include <QtDebug>
 #include <QTimer>
+#include <QFileDialog>
+#include <QMessageBox>
 #include <iostream>
 
 #define MAKE_ID(c1, c2, c3, c4) ((c1) | ((c2) << 8) | ((c3) << 16) | ((c4) << 24))
@@ -49,7 +51,7 @@ char MIDI_dev[16];
 
 // INLINE functions
 void MIDI_PLAYER::check_snd(const char *operation, int err)
-{
+{qDebug() << "trying " << operation << "\n";
     if (err < 0)
         QMessageBox::critical(this, "MIDI Player", QString("Cannot %1\n%2") .arg(operation) .arg(snd_strerror(err)));
 }
@@ -95,7 +97,9 @@ void MIDI_PLAYER::on_Open_button_clicked()
     disconnect_port();
     close_seq();
 
-    QString fn = QFileDialog::getOpenFileName(this,"Open MIDI File","/Data/music/midi","Midi files (*.mid, *.MID);;Any (*.*)");
+	QString fn = QFileDialog::getOpenFileName(this,
+		"Open MIDI File", QString(),
+		"MIDI files (*.mid, *.MID);;Any (*.*)");
     if (fn.isEmpty())
         return;
     ui->MidiFile_display->setText(fn);
@@ -104,7 +108,7 @@ void MIDI_PLAYER::on_Open_button_clicked()
     queue = snd_seq_alloc_named_queue(seq, "midi_player");
     check_snd("create queue", queue);
     connect_port();
-    strcpy(playfile, fn.toAscii().data());
+	strcpy(playfile, fn.toLocal8Bit().data());
     all_events.clear();
     if (!parseFile(playfile)) {
         QMessageBox::critical(this, "MIDI Player", QString("Invalid file"));
@@ -210,7 +214,8 @@ void MIDI_PLAYER::on_Panic_button_clicked()
         send_data(buf,3);
     }
   }
-  else {
+  else
+  {
       getRawDev(ui->PortBox->currentText());
       if (strlen(MIDI_dev)) {
           snd_rawmidi_t *midiInHandle;
@@ -421,9 +426,9 @@ void MIDI_PLAYER::getPorts(QString buf) {
                 ui->PortBox->blockSignals(false);
                 qDebug() << "port:" << snd_seq_port_info_get_name(pinfo);
             }
-            else if (buf.toAscii().data() == QString(snd_seq_port_info_get_name(pinfo))) {
+			else if (buf.toLocal8Bit().data() == QString(snd_seq_port_info_get_name(pinfo))) {
                 QString holdit = QString::number(snd_seq_port_info_get_client(pinfo)) + ":" + QString::number(snd_seq_port_info_get_port(pinfo));
-                strcpy(port_name, holdit.toAscii().data());
+				strcpy(port_name, holdit.toLocal8Bit().data());
                 qDebug() << "Selected port name " << port_name;
             }
         }
@@ -477,7 +482,7 @@ void MIDI_PLAYER::getRawDev(QString buf) {
           // got a valid card, dev and subdev
           if (buf == (QString)snd_rawmidi_info_get_subdevice_name(rawMidiInfo)) {
               QString holdit = "hw:" + QString::number(card_num) + "," + QString::number(dev_num) + "," + QString::number(i);
-              strcpy(MIDI_dev, holdit.toAscii().data());
+			  strcpy(MIDI_dev, holdit.toLocal8Bit().data());
           }
       }	// end WHILE subdev_num
       snd_ctl_rawmidi_next_device(cardHandle, &dev_num);
