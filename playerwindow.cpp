@@ -254,3 +254,38 @@ void PlayerWindow::on_butResetXG_clicked()
 {
 	player->send_SysEx( sysex_reset_XG, sizeof(sysex_reset_XG) );
 }
+
+void PlayerWindow::on_butResetMT32_clicked()
+{
+	static const unsigned char sysex_mt32_p2[] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x10, 0x0E, 0x00, 0x22, 0xF7 };
+	static const unsigned char sysex_mt32_p3[] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x01, 0x31, 0x00, 0x04, 0x35, 0x6A, 0x6B, 0xF7 };
+	unsigned i;
+
+	player->send_SysEx( sysex_reset_GS, sizeof(sysex_reset_GS) );
+	usleep(10000);
+	player->drain();
+
+	for ( i = 0; i < 10; i ++ )
+	{
+		// MT32 bank
+		player->send_controller( i, 0, 127 );
+		player->drain();
+		// reverb
+		player->send_controller( i, 91, 64 );
+		player->drain();
+		usleep(10000);
+	}
+
+	for ( i = 0; i < 10; i ++ )
+	{
+		unsigned char sysex_mt32_p1[] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x20 + i, 0x04, 0x04, 0x18 - i, 0xF7 };
+		player->send_SysEx( sysex_mt32_p1, sizeof(sysex_mt32_p1) );
+		usleep(10000);
+		player->drain();
+	}
+
+	player->send_SysEx( sysex_mt32_p2, sizeof(sysex_mt32_p2) );
+	usleep(10000);
+
+	player->send_SysEx( sysex_mt32_p3, sizeof(sysex_mt32_p3) );
+}

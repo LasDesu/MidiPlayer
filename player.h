@@ -27,6 +27,7 @@ public:
 	void send_pgmchange( unsigned chan, unsigned value );
 	void send_controller( unsigned chan, unsigned param, unsigned value);
 	void send_SysEx( const unsigned char *buf, int len );
+	void drain();
 
 	int ready();
 	unsigned getTick();

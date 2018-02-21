@@ -43,6 +43,7 @@ private slots:
 	void on_butResetGM_clicked();
 	void on_butResetGS_clicked();
 	void on_butResetXG_clicked();
+	void on_butResetMT32_clicked();
 };
 
 #endif // MIDI_PLAYER_H

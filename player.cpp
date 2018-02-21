@@ -241,6 +241,12 @@ void MidiPlayer::send_SysEx( const unsigned char *buf, int data_size )
 	snd_seq_event_output_direct(seq, &ev);
 }
 
+void MidiPlayer::drain()
+{
+	if (seq)
+		snd_seq_drain_output(seq);
+}
+
 void MidiPlayer::init_seq()
 {
 	if (!seq) {
