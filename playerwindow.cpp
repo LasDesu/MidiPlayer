@@ -286,6 +286,7 @@ void PlayerWindow::on_butResetMT32_clicked()
 
 	player->send_SysEx( sysex_mt32_p2, sizeof(sysex_mt32_p2) );
 	usleep(10000);
+	player->drain();
 
 	player->send_SysEx( sysex_mt32_p3, sizeof(sysex_mt32_p3) );
 }

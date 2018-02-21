@@ -16,15 +16,12 @@
 
 static QSettings app_settings( "MAA Soft", "MIDI player" );
 
-// FILE global vars
-snd_seq_queue_status_t *status;
-char MIDI_dev[16];
-
 MidiPlayer::MidiPlayer( PlayerWindow *parent )
 	: QThread( parent )
 	, m_parent( parent )
 {
-	memset( MIDI_dev, 0, sizeof(MIDI_dev) );
+	snd_seq_queue_status_t *status;
+
 	memset( &port, 0, sizeof(port) );
 	seq = NULL;
 	queue = 0;
@@ -371,7 +368,7 @@ void MidiPlayer::getRawDev( const QString &buf ) {
 	err = snd_card_next( &card_num );
 	if (err < 0)
 	{
-		memset(MIDI_dev,0,sizeof(MIDI_dev));
+		midi_dev.clear();
 		// no MIDI cards found in the system
 		snd_card_next(&card_num);
 		return;
@@ -407,10 +404,9 @@ void MidiPlayer::getRawDev( const QString &buf ) {
 					subdev_num = snd_rawmidi_info_get_subdevices_count(rawMidiInfo);
 
 				// got a valid card, dev and subdev
-				if (buf == (QString)snd_rawmidi_info_get_subdevice_name(rawMidiInfo)) {
-					QString holdit = "hw:" + QString::number(card_num) + "," + QString::number(dev_num) + "," + QString::number(i);
-					strcpy(MIDI_dev, holdit.toLocal8Bit().data());
-				}
+				if (buf == (QString)snd_rawmidi_info_get_subdevice_name(rawMidiInfo))
+					midi_dev = "hw:" + QString::number(card_num) + "," + QString::number(dev_num) + "," + QString::number(i);
+
 			}	// end WHILE subdev_num
 			snd_ctl_rawmidi_next_device(cardHandle, &dev_num);
 		}	// end WHILE dev_num
@@ -461,6 +457,8 @@ int MidiPlayer::ready()
 
 unsigned MidiPlayer::getTick()
 {
+	snd_seq_queue_status_t *status;
+
 	snd_seq_get_queue_status(seq, queue, status);
 	return snd_seq_queue_status_get_tick_time(status);
 }
@@ -493,6 +491,8 @@ void MidiPlayer::resumePlayer()
 
 void MidiPlayer::pausePlayer()
 {
+	snd_seq_queue_status_t *status;
+
 	stopPlayer();
 	snd_seq_stop_queue(seq, queue, NULL);
 	snd_seq_get_queue_status(seq, queue, status);
@@ -516,10 +516,11 @@ void MidiPlayer::silence()
 	{
 		char buf[6];
 		getRawDev(m_parent->ui->PortBox->currentText());
-		if (strlen(MIDI_dev)) {
+		if ( !midi_dev.isEmpty() )
+		{
 			snd_rawmidi_t *midiInHandle;
 			snd_rawmidi_t *midiOutHandle;
-			int err=snd_rawmidi_open(&midiInHandle, &midiOutHandle, MIDI_dev, 0);
+			int err=snd_rawmidi_open(&midiInHandle, &midiOutHandle, midi_dev.toLocal8Bit().data(), 0);
 			check_snd("open rawidi",err);
 			snd_rawmidi_nonblock(midiInHandle, 0);
 			err = snd_rawmidi_read(midiInHandle, NULL, 0);

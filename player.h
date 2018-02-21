@@ -9,9 +9,8 @@
 
 class PlayerWindow;
 
-class MidiPlayer : public QThread {
-	//Q_OBJECT
-
+class MidiPlayer : public QThread
+{
 public:
 	MidiPlayer(PlayerWindow *parent = 0);
 	~MidiPlayer();
@@ -77,6 +76,7 @@ private:
 	snd_seq_t *seq;
 	snd_seq_addr_t port;
 	int port_index;
+	QString midi_dev;
 
 	bool minor_key;
 	int sf;  // sharps/flats
