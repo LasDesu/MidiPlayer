@@ -20,8 +20,6 @@ MidiPlayer::MidiPlayer( PlayerWindow *parent )
 	: QThread( parent )
 	, m_parent( parent )
 {
-	snd_seq_queue_status_t *status;
-
 	memset( &port, 0, sizeof(port) );
 	seq = NULL;
 	queue = 0;
@@ -34,7 +32,7 @@ MidiPlayer::MidiPlayer( PlayerWindow *parent )
 	queue = snd_seq_alloc_named_queue(seq, "midi_player");
 	check_snd("create queue", queue);
 	scanPorts(); // empty parm means fill in the PortBox list
-	snd_seq_queue_status_malloc(&status);
+	snd_seq_queue_status_malloc( &status );
 	//close_seq();
 
 	if ( (port_index < 0) && ports.size() )
@@ -49,6 +47,7 @@ MidiPlayer::~MidiPlayer()
 	stopPlayer();
 	reset();
 	app_settings.sync();
+	snd_seq_queue_status_free( status );
 }
 
 /*
@@ -457,10 +456,8 @@ int MidiPlayer::ready()
 
 unsigned MidiPlayer::getTick()
 {
-	snd_seq_queue_status_t *status;
-
-	snd_seq_get_queue_status(seq, queue, status);
-	return snd_seq_queue_status_get_tick_time(status);
+	snd_seq_get_queue_status( seq, queue, status );
+	return snd_seq_queue_status_get_tick_time( status );
 }
 
 void MidiPlayer::startPlayer()
@@ -520,7 +517,7 @@ void MidiPlayer::silence()
 		{
 			snd_rawmidi_t *midiInHandle;
 			snd_rawmidi_t *midiOutHandle;
-			int err=snd_rawmidi_open(&midiInHandle, &midiOutHandle, midi_dev.toLocal8Bit().data(), 0);
+			int err = snd_rawmidi_open(&midiInHandle, &midiOutHandle, midi_dev.toLocal8Bit().data(), 0);
 			check_snd("open rawidi",err);
 			snd_rawmidi_nonblock(midiInHandle, 0);
 			err = snd_rawmidi_read(midiInHandle, NULL, 0);

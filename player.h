@@ -85,6 +85,8 @@ private:
 	QList<snd_seq_addr_t> ports;
 	QList<struct event> all_events;
 
+	snd_seq_queue_status_t *status;
+
 	void handle_big_sysex(snd_seq_event_t *ev);
 
 	inline void check_snd(const char *, int);
